@@ -1,0 +1,9 @@
+# Need to ignore everything within directory
+/*
+
+# Now allow the following to be gitted
+# Include the git ignore file, as want this for all repositories
+!.gitignore
+!README.md
+
+# Allow access to the "miAndroid" project for now
