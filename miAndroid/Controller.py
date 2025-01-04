@@ -28,10 +28,11 @@ from selenium.common.exceptions import StaleElementReferenceException
 from miAndroid.PhoneParameters import PhoneConfig as dv
 
 
+# noinspection PyRedundantParentheses
 class AndroidCtrl():
-    def __init__(self, internal_appium_service = True):
+    def __init__(self, internal_appium_service=True):
         self.appium_service = None
-        self.internal_appium_service = False
+        self.internal_appium_service = False    # Stores whether the class will have a active Appium Service internal
 
         if (internal_appium_service is True):
             self.start_appium_service()
@@ -48,19 +49,18 @@ class AndroidCtrl():
         # Called at destruction of the class. Created to ensure that the phone emulation returns to a default setup,
         # for future scripts
         if (self.am_active == 1):
-            self.quit()                         # Close the driver
+            self.quit()         # Close the driver
             print("Webdriver has been closed")
 
         print("I have been destroyed!")
 
     def quit(self):
         print("Closing down Android controller....")
-        self.close_all_apps()                   # Close every app present (will check if the background view is active
-                                                # and enable if not)
-        self.driver.quit()                      # Close the driver
-        self.am_active = 0                      # Capture that this "app" instance has been made in-active
-                                                # to ensure that when the "__del__" function is called, it won't
-                                                # attempt to go to background view/close stuff
+        self.close_all_apps()   # Close every app present (will check if the background view is active and enable if
+                                # not)
+        self.driver.quit()      # Close the driver
+        self.am_active = 0      # Capture that this "app" instance has been made in-active to ensure that when the
+                                # "__del__" function is called, it won't attempt to go to background view/close stuff
 
         if (self.internal_appium_service is True):
             self.stop_appium_service()
@@ -95,7 +95,7 @@ class AndroidCtrl():
 
     def android_backgroundapp_view(self):
         # Trigger the app background view (and confirm that this has been selected)
-        self.background_view_active = 1             # background view has been triggered, update state
+        self.background_view_active = 1     # background view has been triggered, update state
         self.driver.press_keycode(AndroidKey.APP_SWITCH)
 
     def android_background_view_is_empty(self):
@@ -120,12 +120,12 @@ class AndroidCtrl():
                 ("xpath", "//*[contains(@resource-id, 'com.google.android.apps.nexuslauncher:id/drag_layer')]")))
 
             workspace = drag_layer[0].find_element(by=AppiumBy.XPATH,
-                                                  value=".//*[contains(@resource-id, "
-                                                        "'com.google.android.apps.nexuslauncher:id/workspace')]")
+                                                   value=".//*[contains(@resource-id, "
+                                                         "'com.google.android.apps.nexuslauncher:id/workspace')]")
 
             # Will only get to this point if both of the above don't error. Therefore, this page is indeed the
             # "Homepage" so return 1
-            self.background_view_active = 0     # As have confirmed that the homeview is active, update state
+            self.background_view_active = 0  # As have confirmed that the homeview is active, update state
             return 1
 
         except TimeoutException or NoSuchElementException:
@@ -156,8 +156,8 @@ class AndroidCtrl():
     def close_all_apps(self):
         # This function will put the Phone into the "Home/background" view, and then close/shutdown the app that is at
         # the focus. This should be the latest app that was running prior to the "Home/background" being triggered
-        if (self.background_view_active != 1):  # If the background view is NOT active, then
-            self.android_backgroundapp_view()   # Trigger the background view
+        if (self.background_view_active != 1):              # If the background view is NOT active, then
+            self.android_backgroundapp_view()               # Trigger the background view
 
         # At this point, we are confident that the background view is active. Now to confirm that there is something
         # that needs to be closed...
@@ -180,10 +180,10 @@ class AndroidCtrl():
             except NoSuchElementException or StaleElementReferenceException:
                 print("Unable to determine name of app, but I'm closing it...")
 
-            start_x = int(to_close.rect['x'] + (9*to_close.rect['width']/10))
+            start_x = int(to_close.rect['x'] + (9 * to_close.rect['width'] / 10))
             end_x   = start_x
 
-            start_y = int(to_close.rect['y'] + (9*to_close.rect['height']/10))
+            start_y = int(to_close.rect['y'] + (9 * to_close.rect['height'] / 10))
             end_y   = to_close.rect['y']
             # self.driver.flick(863, 1073, 863, 209)
             self.driver.flick(start_x=start_x, start_y=start_y, end_x=end_x, end_y=end_y)
