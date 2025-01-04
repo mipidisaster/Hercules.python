@@ -11,6 +11,8 @@ classDiagram
 	class AndroidCtrl{
 		+webdriver driver
 		+webdriverwait phone_wait
+		+AppiumService appium_service
+		+bool internal_appium_service
 		+int am_active
 		+int background_view_active
 	
@@ -22,6 +24,8 @@ classDiagram
 		+check_screen_is_homeview()
 		+open_app_folder()
 		+close_all_apps()
+		+start_appium_service()
+		+stop_appium_service()
 	}
 	class PhoneConfig {
 		+dict capabilities
