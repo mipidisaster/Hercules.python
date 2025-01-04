@@ -1,21 +1,41 @@
 #!/usr/bin/env python
 # This script covers basic interfacing and layout of the Android emulation.
+
+# External imports/from statements
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# -- libraries needed only in this class
 from appium import webdriver
 from appium.options.android import UiAutomator2Options
-from selenium.webdriver.support.ui import WebDriverWait  # Functions for waiting
+from appium.webdriver.appium_service import AppiumService
 
 from appium.webdriver.common.appiumby import AppiumBy
 
-from selenium.webdriver.support import expected_conditions as EC  # Expected conditions in
 # support of waiting
 from appium.webdriver.extensions.android.nativekey import AndroidKey
 from bs4 import BeautifulSoup   # Used to parser the xml out from the WebElement
 
+# -- libraries needed in children
+from selenium.webdriver.support.ui import WebDriverWait  # Functions for waiting
+from selenium.webdriver.support import expected_conditions as EC
+
+# -- Import selenium error messages/exceptions
+from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import StaleElementReferenceException
+
+# Internal imports/from statements
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 from miAndroid.PhoneParameters import PhoneConfig as dv
 
 
 class AndroidCtrl():
-    def __init__(self):
+    def __init__(self, internal_appium_service = True):
+        self.appium_service = None
+        self.internal_appium_service = False
+
+        if (internal_appium_service is True):
+            self.start_appium_service()
+
         self.driver = webdriver.Remote(dv.appium_server_url,
                                        options=UiAutomator2Options().load_capabilities(dv.capabilities))
 
@@ -34,12 +54,29 @@ class AndroidCtrl():
         print("I have been destroyed!")
 
     def quit(self):
+        print("Closing down Android controller....")
         self.close_all_apps()                   # Close every app present (will check if the background view is active
                                                 # and enable if not)
         self.driver.quit()                      # Close the driver
         self.am_active = 0                      # Capture that this "app" instance has been made in-active
                                                 # to ensure that when the "__del__" function is called, it won't
                                                 # attempt to go to background view/close stuff
+
+        if (self.internal_appium_service is True):
+            self.stop_appium_service()
+
+    def start_appium_service(self):
+        print("Starting the Appium Service/Server...", end='')
+        self.appium_service = AppiumService()
+        self.appium_service.start()
+        print("OK")
+        self.internal_appium_service = True
+
+    def stop_appium_service(self):
+        print("Closing the Appium Service/Server...", end='')
+        self.appium_service.stop()
+        self.internal_appium_service = False
+        print("OK")
 
     def back(self):
         # Wrapper for the 'webdriver' back function
@@ -64,11 +101,11 @@ class AndroidCtrl():
     def android_background_view_is_empty(self):
         # Check if the background view has the "No recent items" text present
         try:
-            object = self.phone_wait.until(EC.visibility_of_all_elements_located(
+            self.phone_wait.until(EC.visibility_of_all_elements_located(
                 ("xpath", "//*[@content-desc='No recent items']")))
             return 1
 
-        except:
+        except TimeoutException:
             print("There are still items in the background view")
             return 0
 
@@ -79,11 +116,11 @@ class AndroidCtrl():
         # this there is a "/workspace" parameter as well.
         try:
             # Check 1, see if
-            draglayer = self.phone_wait.until(EC.visibility_of_all_elements_located(
+            drag_layer = self.phone_wait.until(EC.visibility_of_all_elements_located(
                 ("xpath", "//*[contains(@resource-id, 'com.google.android.apps.nexuslauncher:id/drag_layer')]")))
 
-            workspace = draglayer[0].find_element(by=AppiumBy.XPATH,
-                                                  value="//*[contains(@resource-id, "
+            workspace = drag_layer[0].find_element(by=AppiumBy.XPATH,
+                                                  value=".//*[contains(@resource-id, "
                                                         "'com.google.android.apps.nexuslauncher:id/workspace')]")
 
             # Will only get to this point if both of the above don't error. Therefore, this page is indeed the
@@ -91,7 +128,7 @@ class AndroidCtrl():
             self.background_view_active = 0     # As have confirmed that the homeview is active, update state
             return 1
 
-        except:
+        except TimeoutException or NoSuchElementException:
             print("Current page isn't the homepage")
             return 0
 
@@ -99,20 +136,20 @@ class AndroidCtrl():
         # The structure of my Emulated Android phone, will be to have a folder at the "Home" level with the following
         # name "Auto App Folder". Within this will be ALL the apps that I intend or have automated
         try:
-            object = self.phone_wait.until(EC.element_to_be_clickable(("xpath", "//*[@text='Auto App Folder']")))
+            folder_object = self.phone_wait.until(EC.element_to_be_clickable(("xpath", "//*[@text='Auto App Folder']")))
             # Look for and open the "Auto App Folder"
-            if (object.get_attribute("class") == "android.widget.TextView"):
-                object.click()
+            if (folder_object.get_attribute("class") == "android.widget.TextView"):
+                folder_object.click()
 
             # After having clicked, check that this has indeed opened a folder, with the same name + now the class has
             # changed to "EditText"
-            object = self.phone_wait.until(EC.element_to_be_clickable(("xpath", "//*[@text='Auto App Folder']")))
-            if (object.get_attribute("class") == "android.widget.EditText"):
+            folder_object = self.phone_wait.until(EC.element_to_be_clickable(("xpath", "//*[@text='Auto App Folder']")))
+            if (folder_object.get_attribute("class") == "android.widget.EditText"):
                 return 1
             else:
                 return 0
 
-        except:
+        except TimeoutException:
             print("Attempt to open the Auto App Folder has resulted in an error...")
             return 0
 
@@ -140,7 +177,7 @@ class AndroidCtrl():
             try:
                 print("Closing app", to_close.get_attribute("content-desc"))
 
-            except:
+            except NoSuchElementException or StaleElementReferenceException:
                 print("Unable to determine name of app, but I'm closing it...")
 
             start_x = int(to_close.rect['x'] + (9*to_close.rect['width']/10))
