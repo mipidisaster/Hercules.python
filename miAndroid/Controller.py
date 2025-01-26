@@ -128,7 +128,7 @@ class AndroidCtrl():
             self.background_view_active = 0  # As have confirmed that the homeview is active, update state
             return 1
 
-        except TimeoutException or NoSuchElementException:
+        except (TimeoutException, NoSuchElementException) as e:
             print("Current page isn't the homepage")
             return 0
 
@@ -172,12 +172,14 @@ class AndroidCtrl():
         # level (with a ''), and the home button (with a 'Home').
         # So will loop, and swipe "up" the last but one entry...
 
-        while (len(apps_running) > 2):
+        for i in range(1, 64):      # Protection against being in this loop forever!
+            if (len(apps_running) <= 2):
+                break
             to_close = apps_running[-2]  # Believe that this *should* give me the last but one
             try:
                 print("Closing app", to_close.get_attribute("content-desc"))
 
-            except NoSuchElementException or StaleElementReferenceException:
+            except (NoSuchElementException, StaleElementReferenceException) as e:
                 print("Unable to determine name of app, but I'm closing it...")
 
             start_x = int(to_close.rect['x'] + (9 * to_close.rect['width'] / 10))
@@ -198,3 +200,36 @@ class AndroidCtrl():
                 break
             else:
                 apps_running = self.driver.find_elements("xpath", "//*[@content-desc]")
+
+    @staticmethod
+    def confirm_at_least_one_webelement_match(element1, element2):
+        set1 = set(element1)  # Element1 is the current data
+        set2 = set(element2)  # Element2 is the previous data
+
+        # Determine of the two webelement arrives if there are any matches.
+        if (len(set1.intersection(set2)) == 0 or len(set1.intersection(set2)) == set()):
+            print("All elements in the input(s) are different...")
+            return 0
+        else:
+            return 1
+
+    @staticmethod
+    def get_unique_index_of_webelement(element1, element2, reverse=False):
+        # element1 = Current data
+        # element2 = Previous data
+
+        set1 = set(element1)
+        set2 = set(element2)
+
+        # This is done by subtracting set2 from set1 (set1 - set2) - as the result of this will be all the unique (and
+        # hence "new" entries within set2)
+        # NOTE, new here is any remainders within element2, which DO NOT match element1
+
+        match_index = []
+
+        for e in list(set1 - set2):  # Find the unique elements
+            match_index.extend([element1.index(e)])  # Determine their position in the list, and record this in a
+            # new list
+
+        match_index.sort(reverse=reverse)
+        return match_index  # Return the list of positions within "element2" which are unique
